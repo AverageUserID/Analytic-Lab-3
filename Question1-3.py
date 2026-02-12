@@ -54,6 +54,10 @@ college_clean[cols] = college_clean[cols].astype('category')
 # Dropping index, unitid, long_x, and lat_y, because they are either unique or nominal in a sense
 college_clean = college_clean.drop(["index", "unitid", "long_x", "lat_y"], axis = 1)
 numeric_cols = list(college_clean.select_dtypes('number'))
+numeric_cols.remove("grad_100_percentile")
+# %%
+numeric_cols
+# %%
 college_clean[numeric_cols] = MinMaxScaler().fit_transform(college_clean[numeric_cols])
 # %%
 # Now apply the One-Hot encoding
@@ -65,15 +69,25 @@ college_encoded = pd.get_dummies(college_clean, columns=category_list)
 print(college_encoded.grad_100_percentile.describe())
 # The upper quantile is at 0.74
 # %%
-college_encoded['grad_100_percentile_f'] = pd.cut(college_encoded.grad_100_percentile,
-                                                  bins=[-1, 0.43, 1],
-                                                  labels=[0, 1])
+college_encoded['grad_100_percentile_cat'] = pd.cut(
+    college_encoded['grad_100_percentile'],
+    bins=[-0.01, 50, 80, 100],
+    labels=[0, 1, 2]
+)
+
 college_encoded.info()
 # %%
 # Calculate the prevalence
-prevalence = (college_encoded.grad_100_percentile_f.value_counts()[1] /
-              len(college_encoded.grad_100_percentile_f))
-print(f"Baseline/Prevalence: {prevalence:.2%}")
+prevalence = (
+    college_encoded['grad_100_percentile_cat']
+        .value_counts(normalize=True)
+        .sort_index()
+)
+print(prevalence)
+
+# %%
+college_encoded = college_encoded.drop(["grad_100_value", "grad_100_percentile", "grad_150_value", "grad_150_percentile"], axis = 1)
+college_encoded.info()
 # %% 
 # Now for the train tune test split
 # I will do a 70 30 train test split first
